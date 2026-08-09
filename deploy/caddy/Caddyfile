@@ -1,0 +1,14 @@
+{
+	email leofrommer1@googlemail.com
+}
+
+gridweather.eu, www.gridweather.eu {
+	encode zstd gzip
+
+	reverse_proxy producer:8080
+
+	log {
+		output stdout
+		format json
+	}
+}

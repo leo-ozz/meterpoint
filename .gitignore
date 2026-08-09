@@ -1,5 +1,50 @@
-.env
-*.tfstate*
+# ---- OpenTofu / Terraform ----
+# State contains your Hetzner token and key material in plaintext.
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
 .terraform/
-target/
-__pycache__/
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+
+# Variable files often hold secrets. Commit *.example versions instead.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# NOTE: .terraform.lock.hcl is deliberately NOT ignored — commit it.
+
+# ---- Secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# direnv
+.envrc
+!.envrc.example
+
+# ---- Java / Gradle ----
+build/
+!src/**/build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+out/
+*.class
+*.jar
+!gradle/wrapper/*.jar
+
+# ---- IntelliJ ----
+.idea/
+*.iml
+*.iws
+*.ipr

@@ -1,0 +1,43 @@
+name: gridweather
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"        # HTTP/3
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data     # certificates + ACME account key - must persist
+      - caddy_config:/config
+    networks:
+      - edge
+    depends_on:
+      producer:
+        condition: service_healthy
+
+  producer:
+    image: ${PRODUCER_IMAGE:-gridweather-producer:dev}
+    restart: unless-stopped
+    # No ports published: reachable only via caddy on the internal network.
+    environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70"
+      SPRING_PROFILES_ACTIVE: prod
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 45s
+    networks:
+      - edge
+
+networks:
+  edge:
+
+volumes:
+  caddy_data:
+  caddy_config:
