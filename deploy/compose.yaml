@@ -1,4 +1,4 @@
-name: gridweather
+name: meterpoint
 
 services:
   caddy:
@@ -19,7 +19,7 @@ services:
         condition: service_healthy
 
   producer:
-    image: ${PRODUCER_IMAGE:-gridweather-producer:dev}
+    image: ${PRODUCER_IMAGE:-meterpoint-producer:dev}
     restart: unless-stopped
     # No ports published: reachable only via caddy on the internal network.
     environment:

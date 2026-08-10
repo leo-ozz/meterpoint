@@ -67,13 +67,13 @@ jobs:
         run: |
           rsync -az --delete \
             deploy/ \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/gridweather/"
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/meterpoint/"
 
       - name: Deploy
         run: |
           ssh -o BatchMode=yes "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "set -e
-             cd ~/gridweather
+             cd ~/meterpoint
              echo 'PRODUCER_IMAGE=${{ env.IMAGE }}:${{ github.sha }}' > .env
              docker compose pull
              docker compose up -d --remove-orphans
