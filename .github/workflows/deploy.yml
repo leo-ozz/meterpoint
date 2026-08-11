@@ -63,6 +63,12 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Generate CI-owned env file
+        run: |
+          cat > deploy/.env.ci <<EOF
+          PRODUCER_IMAGE=${{ env.IMAGE }}:${{ github.sha }}
+          EOF
+
       - name: Sync deploy config
         run: |
           rsync -az --delete \
@@ -72,9 +78,39 @@ jobs:
       - name: Deploy
         run: |
           ssh -o BatchMode=yes "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "set -e
-             cd ~/meterpoint
-             echo 'PRODUCER_IMAGE=${{ env.IMAGE }}:${{ github.sha }}' > .env
-             docker compose pull
-             docker compose up -d --remove-orphans
-             docker compose ps"
+            'bash -euo pipefail -s' <<'REMOTE'
+          cd ~/meterpoint
+
+          SERVER_ENV="$HOME/.meterpoint.env"
+          test -f "$SERVER_ENV" || { echo "server env file missing: $SERVER_ENV" >&2; exit 1; }
+          test -f .env.ci      || { echo ".env.ci was not synced" >&2; exit 1; }
+
+          export COMPOSE_ENV_FILES="$SERVER_ENV,$PWD/.env.ci"
+
+          docker compose pull
+          docker compose up -d --remove-orphans
+          REMOTE
+
+      - name: Wait for healthy
+        run: |
+          ssh -o BatchMode=yes "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            'bash -euo pipefail -s' <<'REMOTE'
+          cd ~/meterpoint
+          export COMPOSE_ENV_FILES="$HOME/.meterpoint.env,$PWD/.env.ci"
+
+          cid="$(docker compose ps -q producer)"
+          test -n "$cid" || { echo "producer container not running" >&2; exit 1; }
+
+          for _ in $(seq 1 30); do
+            status="$(docker inspect -f '{{.State.Health.Status}}' "$cid")"
+            case "$status" in
+              healthy)   echo "producer healthy"; exit 0 ;;
+              unhealthy) echo "producer unhealthy" >&2; docker compose logs --tail=100 producer >&2; exit 1 ;;
+            esac
+            sleep 5
+          done
+
+          echo "timed out waiting for producer health" >&2
+          docker compose logs --tail=100 producer >&2
+          exit 1
+          REMOTE

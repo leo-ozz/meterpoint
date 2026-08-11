@@ -7,10 +7,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"        # HTTP/3
+      - "443:443/udp"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data     # certificates + ACME account key - must persist
+      - caddy_data:/data
       - caddy_config:/config
     networks:
       - edge
@@ -19,24 +19,55 @@ services:
         condition: service_healthy
 
   producer:
-    image: ${PRODUCER_IMAGE:-meterpoint-producer:dev}
+    image: ${PRODUCER_IMAGE:?PRODUCER_IMAGE is required}
     restart: unless-stopped
-    # No ports published: reachable only via caddy on the internal network.
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=60"
       SPRING_PROFILES_ACTIVE: prod
-    mem_limit: 768m
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/readiness"]
       interval: 15s
       timeout: 3s
       retries: 5
       start_period: 45s
     networks:
       - edge
+      - backend
+
+  postgres:
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE is required}
+    restart: unless-stopped
+    stop_signal: SIGINT
+    stop_grace_period: 1m
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - ${MOUNT_PATH:?MOUNT_PATH is required}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -q"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
 
 networks:
   edge:
+  backend:
+    internal: true
 
 volumes:
   caddy_data:
