@@ -36,10 +36,9 @@ resource "hcloud_volume" "data" {
   location = var.location
   format   = "ext4"
 
-  # Enable once Postgres holds real data (Sunday).
-  # lifecycle {
-  #   prevent_destroy = true
-  # }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "hcloud_volume_attachment" "data" {
