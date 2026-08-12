@@ -5,6 +5,9 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      connection-timeout: 3000
+      validation-timeout: 2000
   jpa:
     hibernate:
       ddl-auto: none
@@ -14,3 +17,19 @@ spring:
     baseline-on-migrate: false
     validate-on-migrate: true
     clean-disabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+        liveness:
+          include: livenessState
+  endpoints:
+    web:
+      exposure:
+        include: health
