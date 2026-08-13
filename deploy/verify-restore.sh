@@ -32,7 +32,7 @@ docker compose exec -T postgres \
   sh -c "pg_restore -U \"\$POSTGRES_USER\" -d $SCRATCH_DB --exit-on-error" < "$DUMP"
 
 # Compare Flyway history. Checksums prove the schema is identical, not merely present.
-LIVE=$(pg "psql -U \"\$POSTGRES_USER\" -d $POSTGRES_DB -At -c \"select version||':'||checksum from flyway_schema_history where success order by installed_rank;\"")
+LIVE=$(pg "psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select version||':'||checksum from flyway_schema_history where success order by installed_rank;\"")
 REST=$(pg "psql -U \"\$POSTGRES_USER\" -d $SCRATCH_DB -At -c \"select version||':'||checksum from flyway_schema_history where success order by installed_rank;\"")
 
 if [ -z "$REST" ]; then
@@ -58,7 +58,7 @@ case "$IDX" in
 esac
 
 # Row counts. Currently zero everywhere; meaningful from week 2 onward.
-LIVE_ROWS=$(pg "psql -U \"\$POSTGRES_USER\" -d $POSTGRES_DB -At -c \"select count(*) from outbox;\"")
+LIVE_ROWS=$(pg "psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select count(*) from outbox;\"")
 REST_ROWS=$(pg "psql -U \"\$POSTGRES_USER\" -d $SCRATCH_DB -At -c \"select count(*) from outbox;\"")
 echo "outbox rows: live=$LIVE_ROWS restored=$REST_ROWS (live may have grown since the dump)"
 

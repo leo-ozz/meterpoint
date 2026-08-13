@@ -25,8 +25,12 @@ resource "hcloud_server" "app" {
   ssh_keys     = [hcloud_ssh_key.deploy.id]
   firewall_ids = [hcloud_firewall.meterpoint.id]
 
-  user_data = templatefile("${path.module}/cloud-init.yaml", {
+  user_data = templatefile("${path.module}/cloud-init.tftpl", {
     ssh_public_key = trimspace(file(pathexpand(var.ssh_public_key_path)))
+    ci_public_key  = trimspace(file(pathexpand(var.ci_public_key_path)))
+    volume_device  = hcloud_volume.data.linux_device
+    mount_path     = var.data_mount_path
+    postgres_uid   = var.postgres_uid
   })
 }
 
@@ -44,5 +48,5 @@ resource "hcloud_volume" "data" {
 resource "hcloud_volume_attachment" "data" {
   volume_id = hcloud_volume.data.id
   server_id = hcloud_server.app.id
-  automount = true
+  automount = false
 }

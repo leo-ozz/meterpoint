@@ -1,0 +1,102 @@
+#cloud-config
+#
+# Rendered by OpenTofu via templatefile(). Variables:
+#   ssh_public_key, volume_device, mount_path, postgres_uid
+
+users:
+  - name: deploy
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+      - ${ci_public_key}
+
+package_update: true
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+
+  - path: /usr/local/sbin/meterpoint-mount-data.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      DEVICE="${volume_device}"
+      MOUNT="${mount_path}"
+      PG_UID="${postgres_uid}"
+
+      # The volume attachment can lag first boot. Wait for the device
+      # rather than assuming it is present.
+      for i in $(seq 1 60); do
+        [ -b "$DEVICE" ] && break
+        sleep 2
+      done
+      [ -b "$DEVICE" ] || { echo "device never appeared: $DEVICE" >&2; exit 1; }
+
+      # Refuse to continue if there is no filesystem. Deliberately no mkfs
+      # anywhere in this script: the provider formats the volume once, at
+      # creation. Nothing in the bootstrap path should ever be capable of
+      # formatting a volume that already holds data.
+      blkid "$DEVICE" >/dev/null || { echo "no filesystem on $DEVICE" >&2; exit 1; }
+
+      mkdir -p "$MOUNT"
+
+      # nofail: a detached or slow volume must not drop the boot into
+      #         emergency mode on a machine with no console habit.
+      # discard: pass TRIM through to the backing storage.
+      if ! grep -q " $MOUNT " /etc/fstab; then
+        echo "$DEVICE $MOUNT ext4 discard,nofail,defaults 0 0" >> /etc/fstab
+      fi
+
+      systemctl daemon-reload
+      mountpoint -q "$MOUNT" || mount "$MOUNT"
+      mountpoint -q "$MOUNT" || { echo "mount failed: $MOUNT" >&2; exit 1; }
+
+      mkdir -p "$MOUNT"/{postgres,garage,parquet,backups}
+
+      # The container's postgres user has a fixed uid and a bind-mounted
+      # host directory keeps host ownership, so this must match or the
+      # entrypoint aborts on permissions.
+      chown "$PG_UID:$PG_UID" "$MOUNT/postgres"
+      chmod 0700              "$MOUNT/postgres"
+
+      chown deploy:deploy "$MOUNT/parquet" "$MOUNT/backups"
+      chmod 0750          "$MOUNT/parquet" "$MOUNT/backups"
+
+  - path: /etc/systemd/system/meterpoint.service
+    content: |
+      [Unit]
+      Description=meterpoint stack
+      Requires=docker.service
+      After=docker.service
+      RequiresMountsFor=${mount_path}
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/home/deploy/meterpoint
+      ExecStart=/usr/bin/docker compose up -d --remove-orphans
+      ExecStop=/usr/bin/docker compose down
+      User=deploy
+      Group=deploy
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - usermod -aG docker deploy
+  - systemctl restart ssh
+  - /usr/local/sbin/meterpoint-mount-data.sh
+  - systemctl daemon-reload
