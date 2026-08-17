@@ -1,4 +1,4 @@
-package eu.gridweather.producer;
+package eu.meterpoint.producer;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
