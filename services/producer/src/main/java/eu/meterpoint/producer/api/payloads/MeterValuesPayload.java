@@ -1,4 +1,4 @@
-package eu.meterpoint.producer.api;
+package eu.meterpoint.producer.api.payloads;
 
 import java.util.List;
 

@@ -3,7 +3,7 @@ package eu.meterpoint.producer.ingest;
 import java.time.Instant;
 import java.util.UUID;
 
-import eu.meterpoint.producer.api.MeterValuesPayload;
+import eu.meterpoint.producer.api.payloads.MeterValuesPayload;
 import eu.meterpoint.producer.domain.outbox.OutboxRepository;
 import eu.meterpoint.producer.domain.reading.ReadingRepository;
 import org.springframework.stereotype.Component;

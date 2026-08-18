@@ -1,0 +1,51 @@
+# application-local.yaml
+# Local development only. Activate with: SPRING_PROFILES_ACTIVE=local
+# Server-owned config lives in ~/.meterpoint.env and is not read here.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/meterpoint
+    username: meterpoint
+    password: meterpoint
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 5000
+      leak-detection-threshold: 10000
+      connection-init-sql: "SET lock_timeout = '3s'"
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: true
+
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: false
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-stacktrace: on_param
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    eu.meterpoint.producer: DEBUG
+    org.springframework.jdbc.core.JdbcTemplate: DEBUG
+    org.springframework.jdbc.support.JdbcTransactionManager: DEBUG
+    org.flywaydb: INFO

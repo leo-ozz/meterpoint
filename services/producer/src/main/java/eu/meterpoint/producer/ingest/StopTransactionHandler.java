@@ -3,7 +3,7 @@ package eu.meterpoint.producer.ingest;
 import java.time.Instant;
 import java.util.UUID;
 
-import eu.meterpoint.producer.api.StopTransactionPayload;
+import eu.meterpoint.producer.api.payloads.StopTransactionPayload;
 import eu.meterpoint.producer.domain.outbox.OutboxRepository;
 import eu.meterpoint.producer.domain.session.SessionRepository;
 import org.springframework.stereotype.Component;

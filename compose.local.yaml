@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: meterpoint
+      POSTGRES_USER: meterpoint
+      POSTGRES_PASSWORD: meterpoint
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meterpoint"]
+      interval: 5s
+      timeout: 3s
+      retries: 5

@@ -3,8 +3,8 @@ package eu.meterpoint.producer.ingest;
 import java.time.Instant;
 import java.util.UUID;
 
-import eu.meterpoint.producer.api.StartTransactionPayload;
-import eu.meterpoint.producer.api.StartTransactionResponse;
+import eu.meterpoint.producer.api.payloads.StartTransactionPayload;
+import eu.meterpoint.producer.api.payloads.StartTransactionResponse;
 import eu.meterpoint.producer.domain.outbox.OutboxRepository;
 import eu.meterpoint.producer.domain.session.SessionRepository;
 import org.springframework.stereotype.Component;

@@ -1,6 +1,7 @@
 package eu.meterpoint.producer.domain.session;
 
-enum SessionState {
+public enum SessionState {
     ACTIVE,
+    SUPERSEDED,
     STOPPED
 }

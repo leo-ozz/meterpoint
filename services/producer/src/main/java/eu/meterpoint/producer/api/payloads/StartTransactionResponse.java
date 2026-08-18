@@ -1,4 +1,4 @@
-package eu.meterpoint.producer.api;
+package eu.meterpoint.producer.api.payloads;
 
 public record StartTransactionResponse(
         int transactionId,
